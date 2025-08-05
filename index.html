@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,55 +6,68 @@
   <style>
     body { font-family: Arial; padding: 20px; }
     h2 { text-align: center; }
-    .item { margin-bottom: 10px; }
-    input[type="text"] { width: 70%; padding: 8px; font-size: 16px; }
-    input[type="number"] { width: 25%; padding: 8px; font-size: 16px; margin-left: 5px; }
+    .item { margin-bottom: 10px; display: flex; gap: 5px; }
+    input[type="text"] { flex: 2; padding: 8px; font-size: 16px; }
+    input[type="number"] { flex: 1; padding: 8px; font-size: 16px; }
     button { padding: 10px; margin-top: 10px; width: 100%; font-size: 16px; }
   </style>
 </head>
 <body>
   <h2>Restaurant Order List</h2>
-  
+
   <div id="list"></div>
 
   <input type="text" id="newItem" placeholder="New Item Name">
   <button onclick="addItem()">Add Item</button>
 
   <script>
-    let items = [
-      "Cherry Tomato 8pk",
-      "Cucumber 20pc",
-      "Tomato 25lbs",
-      "Baby Spinach",
-      "Lemon 20pc",
-      "Lime 30pc",
-      "Romaine Hearts Box",
-      "Green Bell Pepper 25lbs",
-      "Sliced Mushroom 5lbs",
-      "Red Bell Pepper 25lbs"
+    let items = JSON.parse(localStorage.getItem('orderList')) || [
+      { name: "Cherry Tomato 8pk", qty: "" },
+      { name: "Cucumber 20pc", qty: "" },
+      { name: "Tomato 25lbs", qty: "" },
+      { name: "Baby Spinach", qty: "" },
+      { name: "Lemon 20pc", qty: "" },
+      { name: "Lime 30pc", qty: "" },
+      { name: "Romaine Hearts Box", qty: "" },
+      { name: "Green Bell Pepper 25lbs", qty: "" },
+      { name: "Sliced Mushroom 5lbs", qty: "" },
+      { name: "Red Bell Pepper 25lbs", qty: "" }
     ];
+
+    function saveItems() {
+      localStorage.setItem('orderList', JSON.stringify(items));
+    }
 
     function renderList() {
       let listDiv = document.getElementById('list');
       listDiv.innerHTML = '';
-      items.forEach(item => {
-        listDiv.innerHTML += `<div class="item">
-          <input type="text" value="${item}" readonly>
-          <input type="number" placeholder="Qty">
-        </div>`;
+      items.forEach((item, index) => {
+        listDiv.innerHTML += `
+          <div class="item">
+            <input type="text" value="${item.name}" readonly>
+            <input type="number" value="${item.qty}" placeholder="Qty"
+              onchange="updateQty(${index}, this.value)">
+          </div>`;
       });
     }
 
     function addItem() {
       let newItem = document.getElementById('newItem').value;
       if(newItem.trim() !== '') {
-        items.push(newItem);
+        items.push({ name: newItem, qty: "" });
         document.getElementById('newItem').value = '';
+        saveItems();
         renderList();
       }
+    }
+
+    function updateQty(index, value) {
+      items[index].qty = value;
+      saveItems();
     }
 
     renderList();
   </script>
 </body>
 </html>
+
