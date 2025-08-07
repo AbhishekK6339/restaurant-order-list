@@ -3,13 +3,34 @@
 <head>
   <title>Restaurant Order List</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; }
+    body {
+      font-family: Arial; padding: 20px;
+      background-color: white; color: black;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark {
+      background-color: #1e1e1e;
+      color: white;
+    }
     h2 { text-align: center; }
-    .item { margin-bottom: 10px; display: flex; gap: 5px; }
-    input[type="text"] { flex: 2; padding: 8px; font-size: 16px; }
-    input[type="number"] { flex: 1; padding: 8px; font-size: 16px; }
-    button { padding: 10px; margin-top: 10px; width: 100%; font-size: 16px; }
+    .item {
+      display: flex; align-items: center; gap: 5px;
+      margin-bottom: 10px;
+    }
+    input[type="text"], input[type="number"] {
+      padding: 8px; font-size: 16px;
+    }
+    input[type="text"] { flex: 2; }
+    input[type="number"] { width: 80px; }
+    input[type="checkbox"] { transform: scale(1.4); }
+    button {
+      padding: 10px; font-size: 14px;
+      cursor: pointer; margin-top: 5px;
+      width: 100%;
+    }
+    .action-btns { display: flex; gap: 5px; }
   </style>
 </head>
 <body>
@@ -19,20 +40,26 @@
 
   <input type="text" id="newItem" placeholder="New Item Name">
   <button onclick="addItem()">Add Item</button>
+  <button onclick="sortItems()">Sort A–Z</button>
+  <button onclick="resetList()">Reset List</button>
+  <button onclick="exportToPDF()">Export to PDF</button>
+  <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
 
   <script>
-    let items = JSON.parse(localStorage.getItem('orderList')) || [
-      { name: "Cherry Tomato 8pk", qty: "" },
-      { name: "Cucumber 20pc", qty: "" },
-      { name: "Tomato 25lbs", qty: "" },
-      { name: "Baby Spinach", qty: "" },
-      { name: "Lemon 20pc", qty: "" },
-      { name: "Lime 30pc", qty: "" },
-      { name: "Romaine Hearts Box", qty: "" },
-      { name: "Green Bell Pepper 25lbs", qty: "" },
-      { name: "Sliced Mushroom 5lbs", qty: "" },
-      { name: "Red Bell Pepper 25lbs", qty: "" }
+    let defaultItems = [
+      { name: "Cherry Tomato", qty: "", done: false },
+      { name: "Cucumber", qty: "", done: false },
+      { name: "Tomato", qty: "", done: false },
+      { name: "Baby Spinach", qty: "", done: false },
+      { name: "Lemon", qty: "", done: false },
+      { name: "Lime", qty: "", done: false },
+      { name: "Romaine Hearts", qty: "", done: false },
+      { name: "Green Bell Pepper", qty: "", done: false },
+      { name: "Sliced Mushroom", qty: "", done: false },
+      { name: "Red Bell Pepper", qty: "", done: false }
     ];
+
+    let items = JSON.parse(localStorage.getItem('orderList')) || JSON.parse(JSON.stringify(defaultItems));
 
     function saveItems() {
       localStorage.setItem('orderList', JSON.stringify(items));
@@ -44,17 +71,25 @@
       items.forEach((item, index) => {
         listDiv.innerHTML += `
           <div class="item">
-            <input type="text" value="${item.name}" readonly>
-            <input type="number" value="${item.qty}" placeholder="Qty"
-              onchange="updateQty(${index}, this.value)">
+            <input type="checkbox" ${item.done ? "checked" : ""} onchange="toggleDone(${index})">
+            <input type="text" value="${item.name}" onchange="updateName(${index}, this.value)">
+            <input type="number" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
+            <div class="action-btns">
+              <button onclick="deleteItem(${index})">❌</button>
+            </div>
           </div>`;
       });
     }
 
+    function toggleDone(index) {
+      items[index].done = !items[index].done;
+      saveItems();
+    }
+
     function addItem() {
       let newItem = document.getElementById('newItem').value;
-      if(newItem.trim() !== '') {
-        items.push({ name: newItem, qty: "" });
+      if (newItem.trim() !== '') {
+        items.push({ name: newItem.trim(), qty: "", done: false });
         document.getElementById('newItem').value = '';
         saveItems();
         renderList();
@@ -66,8 +101,55 @@
       saveItems();
     }
 
+    function updateName(index, value) {
+      items[index].name = value.trim();
+      saveItems();
+    }
+
+    function deleteItem(index) {
+      if (confirm("Delete this item?")) {
+        items.splice(index, 1);
+        saveItems();
+        renderList();
+      }
+    }
+
+    function sortItems() {
+      items.sort((a, b) => a.name.localeCompare(b.name));
+      saveItems();
+      renderList();
+    }
+
+    function resetList() {
+      if (confirm("Are you sure you want to reset the list?")) {
+        items = JSON.parse(JSON.stringify(defaultItems));
+        saveItems();
+        renderList();
+      }
+    }
+
+    async function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const today = new Date().toLocaleString();
+      doc.setFontSize(14);
+      doc.text("Restaurant Order List", 20, 20);
+      doc.setFontSize(10);
+      doc.text(`Exported on: ${today}`, 20, 26);
+      let y = 40;
+      items.forEach(item => {
+        const line = `${item.done ? "[x]" : "[ ]"} ${item.name}: ${item.qty || ""}`;
+        doc.text(line, 20, y);
+        y += 10;
+      });
+      doc.save("Restaurant_Order_List.pdf");
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+    }
+
     renderList();
   </script>
 </body>
 </html>
-
