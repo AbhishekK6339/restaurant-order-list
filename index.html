@@ -18,12 +18,14 @@
     .item {
       display: flex; align-items: center; gap: 5px;
       margin-bottom: 10px;
+      flex-wrap: wrap;
     }
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="number"], select {
       padding: 8px; font-size: 16px;
     }
     input[type="text"] { flex: 2; }
     input[type="number"] { width: 80px; }
+    select { width: 90px; }
     input[type="checkbox"] { transform: scale(1.4); }
     button {
       padding: 10px; font-size: 14px;
@@ -47,16 +49,16 @@
 
   <script>
     let defaultItems = [
-      { name: "Cherry Tomato", qty: "", done: false },
-      { name: "Cucumber", qty: "", done: false },
-      { name: "Tomato", qty: "", done: false },
-      { name: "Baby Spinach", qty: "", done: false },
-      { name: "Lemon", qty: "", done: false },
-      { name: "Lime", qty: "", done: false },
-      { name: "Romaine Hearts", qty: "", done: false },
-      { name: "Green Bell Pepper", qty: "", done: false },
-      { name: "Sliced Mushroom", qty: "", done: false },
-      { name: "Red Bell Pepper", qty: "", done: false }
+      { name: "Cherry Tomato", qty: "", unit: "pcs", done: false },
+      { name: "Cucumber", qty: "", unit: "pcs", done: false },
+      { name: "Tomato", qty: "", unit: "pcs", done: false },
+      { name: "Baby Spinach", qty: "", unit: "pcs", done: false },
+      { name: "Lemon", qty: "", unit: "pcs", done: false },
+      { name: "Lime", qty: "", unit: "pcs", done: false },
+      { name: "Romaine Hearts", qty: "", unit: "pcs", done: false },
+      { name: "Green Bell Pepper", qty: "", unit: "pcs", done: false },
+      { name: "Sliced Mushroom", qty: "", unit: "pcs", done: false },
+      { name: "Red Bell Pepper", qty: "", unit: "pcs", done: false }
     ];
 
     let items = JSON.parse(localStorage.getItem('orderList')) || JSON.parse(JSON.stringify(defaultItems));
@@ -71,8 +73,10 @@
         const checkbox = div.querySelector('input[type="checkbox"]');
         const name = div.querySelector('input[type="text"]').value.trim();
         const qty = div.querySelector('input[type="number"]').value;
+        const unit = div.querySelector('select').value;
         items[index].name = name;
         items[index].qty = qty;
+        items[index].unit = unit;
         items[index].done = checkbox.checked;
       });
       saveItems();
@@ -92,6 +96,12 @@
             <input type="checkbox" ${item.done ? "checked" : ""} onchange="toggleDone(${index})">
             <input type="text" value="${item.name}" onchange="updateName(${index}, this.value)">
             <input type="number" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
+            <select onchange="updateUnit(${index}, this.value)">
+              <option value="pcs" ${item.unit === "pcs" ? "selected" : ""}>pcs</option>
+              <option value="case" ${item.unit === "case" ? "selected" : ""}>case</option>
+              <option value="box" ${item.unit === "box" ? "selected" : ""}>box</option>
+              <option value="g" ${item.unit === "g" ? "selected" : ""}>g</option>
+            </select>
             <div class="action-btns">
               <button onclick="deleteItem(${index})">❌</button>
             </div>
@@ -107,7 +117,7 @@
     function addItem() {
       let newItem = document.getElementById('newItem').value;
       if (newItem.trim() !== '') {
-        items.push({ name: newItem.trim(), qty: "", done: false });
+        items.push({ name: newItem.trim(), qty: "", unit: "pcs", done: false });
         document.getElementById('newItem').value = '';
         saveItems();
         renderList();
@@ -116,6 +126,11 @@
 
     function updateQty(index, value) {
       items[index].qty = value;
+      saveItems();
+    }
+
+    function updateUnit(index, value) {
+      items[index].unit = value;
       saveItems();
     }
 
@@ -156,7 +171,7 @@
       doc.text(`Exported on: ${today}`, 20, 26);
       let y = 40;
       items.forEach(item => {
-        const line = `${item.done ? "[x]" : "[ ]"} ${item.name}: ${item.qty || ""}`;
+        const line = `${item.done ? "[x]" : "[ ]"} ${item.name}: ${item.qty || ""} ${item.unit}`;
         doc.text(line, 20, y);
         y += 10;
       });
