@@ -4,52 +4,33 @@
   <title>Produce Order</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body {
-      font-family: Arial; padding: 20px;
-      background-color: white; color: black;
-      transition: background-color 0.3s, color 0.3s;
-      max-width: 600px; margin: auto;
-    }
-    body.dark {
-      background-color: #1e1e1e;
-      color: white;
-    }
-    h2 { text-align: center; }
-    .item {
-      display: flex; align-items: center; gap: 5px;
-      margin-bottom: 10px; flex-wrap: wrap;
-    }
-    label.item-number {
-      width: 20px;
-      text-align: right;
-    }
-    input[type="text"], input[type="number"], select {
-      padding: 8px; font-size: 16px;
-    }
-    input[type="text"] { flex: 2; }
-    input[type="number"] { width: 80px; }
-    select { width: 90px; }
-    input[type="checkbox"] { transform: scale(1.4); }
-    button {
-      padding: 10px; font-size: 14px;
-      cursor: pointer; margin-top: 5px;
-      width: 100%; max-width: 600px; margin-left: auto; margin-right: auto;
-    }
-    .action-btns { display: flex; gap: 5px; }
+    body.dark { background-color: #1e1e1e; color: white; }
+    .item { margin-bottom: 15px; }
+    .item input[type="checkbox"] { transform: scale(1.3); margin-right: 10px; }
+    .item-number { font-weight: bold; margin-right: 10px; width: 30px; display: inline-block; }
+    .form-select, .form-control { max-width: 120px; }
   </style>
 </head>
-<body>
-  <h2>Produce Order</h2>
+<body class="p-3">
+  <div class="container">
+    <h2 class="text-center mb-4">Produce Order</h2>
 
-  <div id="list"></div>
+    <div id="list"></div>
 
-  <input type="text" id="newItem" placeholder="New Item Name">
-  <button onclick="addItem()">Add Item</button>
-  <button onclick="prepareThen(sortItems)">Sort A–Z</button>
-  <button onclick="prepareThen(resetList)">Reset List</button>
-  <button onclick="prepareThen(exportToPDF)">Export to PDF</button>
-  <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+    <div class="input-group mb-3">
+      <input type="text" class="form-control" id="newItem" placeholder="New Item Name">
+      <button class="btn btn-primary" onclick="addItem()">Add Item</button>
+    </div>
+
+    <div class="d-grid gap-2 mb-2">
+      <button class="btn btn-secondary" onclick="prepareThen(sortItems)">Sort A–Z</button>
+      <button class="btn btn-warning" onclick="prepareThen(resetList)">Reset List</button>
+      <button class="btn btn-success" onclick="prepareThen(exportToPDF)">Export to PDF</button>
+      <button class="btn btn-dark" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+    </div>
+  </div>
 
   <script>
     let defaultItems = [
@@ -92,24 +73,32 @@
     }
 
     function renderList() {
-      let listDiv = document.getElementById('list');
+      const listDiv = document.getElementById('list');
       listDiv.innerHTML = '';
       items.forEach((item, index) => {
         let number = index + 1;
         listDiv.innerHTML += `
-          <div class="item">
-            <label class="item-number">${number}.</label>
-            <input type="checkbox" ${item.done ? "checked" : ""} onchange="toggleDone(${index})">
-            <input type="text" value="${item.name}" onchange="updateName(${index}, this.value)">
-            <input type="number" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
-            <select onchange="updateUnit(${index}, this.value)">
-              <option value="pcs" ${item.unit === "pcs" ? "selected" : ""}>pcs</option>
-              <option value="case" ${item.unit === "case" ? "selected" : ""}>case</option>
-              <option value="box" ${item.unit === "box" ? "selected" : ""}>box</option>
-              <option value="g" ${item.unit === "g" ? "selected" : ""}>g</option>
-            </select>
-            <div class="action-btns">
-              <button onclick="deleteItem(${index})">❌</button>
+          <div class="item row align-items-center gx-2">
+            <div class="col-auto">
+              <span class="item-number">${number}.</span>
+              <input type="checkbox" ${item.done ? "checked" : ""} onchange="toggleDone(${index})">
+            </div>
+            <div class="col">
+              <input type="text" class="form-control" value="${item.name}" onchange="updateName(${index}, this.value)">
+            </div>
+            <div class="col-3">
+              <input type="number" class="form-control" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
+            </div>
+            <div class="col-3">
+              <select class="form-select" onchange="updateUnit(${index}, this.value)">
+                <option value="pcs" ${item.unit === "pcs" ? "selected" : ""}>pcs</option>
+                <option value="case" ${item.unit === "case" ? "selected" : ""}>case</option>
+                <option value="box" ${item.unit === "box" ? "selected" : ""}>box</option>
+                <option value="g" ${item.unit === "g" ? "selected" : ""}>g</option>
+              </select>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-outline-danger btn-sm" onclick="deleteItem(${index})">❌</button>
             </div>
           </div>`;
       });
@@ -121,7 +110,7 @@
     }
 
     function addItem() {
-      let newItem = document.getElementById('newItem').value;
+      const newItem = document.getElementById('newItem').value;
       if (newItem.trim() !== '') {
         items.push({ name: newItem.trim(), qty: "", unit: "pcs", done: false });
         document.getElementById('newItem').value = '';
