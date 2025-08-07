@@ -10,6 +10,10 @@
     .item { margin-bottom: 15px; }
     .item-number { font-weight: bold; margin-right: 10px; width: 30px; display: inline-block; }
     .form-select, .form-control { max-width: 120px; }
+    input[type="text"] {
+      white-space: normal !important;
+      word-break: break-word !important;
+    }
   </style>
 </head>
 <body class="bg-light p-3">
@@ -80,7 +84,7 @@
               <span class="item-number">${number}.</span>
             </div>
             <div class="col-6">
-              <input type="text" class="form-control" value="${item.name}" onchange="updateName(${index}, this.value)">
+              <input type="text" class="form-control text-wrap" style="white-space: normal; word-break: break-word;" value="${item.name}" onchange="updateName(${index}, this.value)">
             </div>
             <div class="col-2">
               <input type="number" class="form-control form-control-sm" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
