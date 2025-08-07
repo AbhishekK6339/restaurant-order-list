@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Restaurant Order List</title>
+  <title>Produce Order</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
@@ -9,6 +9,7 @@
       font-family: Arial; padding: 20px;
       background-color: white; color: black;
       transition: background-color 0.3s, color 0.3s;
+      max-width: 600px; margin: auto;
     }
     body.dark {
       background-color: #1e1e1e;
@@ -17,8 +18,11 @@
     h2 { text-align: center; }
     .item {
       display: flex; align-items: center; gap: 5px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
+      margin-bottom: 10px; flex-wrap: wrap;
+    }
+    label.item-number {
+      width: 20px;
+      text-align: right;
     }
     input[type="text"], input[type="number"], select {
       padding: 8px; font-size: 16px;
@@ -30,13 +34,13 @@
     button {
       padding: 10px; font-size: 14px;
       cursor: pointer; margin-top: 5px;
-      width: 100%;
+      width: 100%; max-width: 600px; margin-left: auto; margin-right: auto;
     }
     .action-btns { display: flex; gap: 5px; }
   </style>
 </head>
 <body>
-  <h2>Restaurant Order List</h2>
+  <h2>Produce Order</h2>
 
   <div id="list"></div>
 
@@ -91,8 +95,10 @@
       let listDiv = document.getElementById('list');
       listDiv.innerHTML = '';
       items.forEach((item, index) => {
+        let number = index + 1;
         listDiv.innerHTML += `
           <div class="item">
+            <label class="item-number">${number}.</label>
             <input type="checkbox" ${item.done ? "checked" : ""} onchange="toggleDone(${index})">
             <input type="text" value="${item.name}" onchange="updateName(${index}, this.value)">
             <input type="number" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
@@ -166,16 +172,16 @@
       const doc = new jsPDF();
       const today = new Date().toLocaleString();
       doc.setFontSize(14);
-      doc.text("Restaurant Order List", 20, 20);
+      doc.text("Produce Order", 20, 20);
       doc.setFontSize(10);
       doc.text(`Exported on: ${today}`, 20, 26);
       let y = 40;
-      items.forEach(item => {
-        const line = `${item.done ? "[x]" : "[ ]"} ${item.name}: ${item.qty || ""} ${item.unit}`;
+      items.forEach((item, index) => {
+        const line = `${index + 1}. ${item.done ? "[x]" : "[ ]"} ${item.name}: ${item.qty || ""} ${item.unit}`;
         doc.text(line, 20, y);
         y += 10;
       });
-      doc.save("Restaurant_Order_List.pdf");
+      doc.save("Produce_Order_List.pdf");
     }
 
     function toggleDarkMode() {
