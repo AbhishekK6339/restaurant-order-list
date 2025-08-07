@@ -82,19 +82,16 @@
             <div class="col">
               <input type="text" class="form-control" value="${item.name}" onchange="updateName(${index}, this.value)">
             </div>
-            <div class="col-3">
-              <input type="number" class="form-control" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
+            <div class="col-2">
+              <input type="number" class="form-control form-control-sm" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
             </div>
-            <div class="col-3">
-              <select class="form-select" onchange="updateUnit(${index}, this.value)">
+            <div class="col-2">
+              <select class="form-select form-select-sm" onchange="updateUnit(${index}, this.value)">
                 <option value="pcs" ${item.unit === "pcs" ? "selected" : ""}>pcs</option>
                 <option value="case" ${item.unit === "case" ? "selected" : ""}>case</option>
                 <option value="box" ${item.unit === "box" ? "selected" : ""}>box</option>
                 <option value="g" ${item.unit === "g" ? "selected" : ""}>g</option>
               </select>
-            </div>
-            <div class="col-auto">
-              <button class="btn btn-outline-danger btn-sm" onclick="deleteItem(${index})">❌</button>
             </div>
           </div>`;
       });
@@ -123,14 +120,6 @@
     function updateName(index, value) {
       items[index].name = value.trim();
       saveItems();
-    }
-
-    function deleteItem(index) {
-      if (confirm("Delete this item?")) {
-        items.splice(index, 1);
-        saveItems();
-        renderList();
-      }
     }
 
     function sortItems() {
