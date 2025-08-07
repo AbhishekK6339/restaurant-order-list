@@ -40,9 +40,9 @@
 
   <input type="text" id="newItem" placeholder="New Item Name">
   <button onclick="addItem()">Add Item</button>
-  <button onclick="sortItems()">Sort A–Z</button>
-  <button onclick="resetList()">Reset List</button>
-  <button onclick="exportToPDF()">Export to PDF</button>
+  <button onclick="prepareThen(sortItems)">Sort A–Z</button>
+  <button onclick="prepareThen(resetList)">Reset List</button>
+  <button onclick="prepareThen(exportToPDF)">Export to PDF</button>
   <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
 
   <script>
@@ -63,6 +63,24 @@
 
     function saveItems() {
       localStorage.setItem('orderList', JSON.stringify(items));
+    }
+
+    function syncInputValues() {
+      const itemDivs = document.querySelectorAll('.item');
+      itemDivs.forEach((div, index) => {
+        const checkbox = div.querySelector('input[type="checkbox"]');
+        const name = div.querySelector('input[type="text"]').value.trim();
+        const qty = div.querySelector('input[type="number"]').value;
+        items[index].name = name;
+        items[index].qty = qty;
+        items[index].done = checkbox.checked;
+      });
+      saveItems();
+    }
+
+    function prepareThen(actionFunc) {
+      syncInputValues();
+      actionFunc();
     }
 
     function renderList() {
