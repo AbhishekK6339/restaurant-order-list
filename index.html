@@ -8,14 +8,13 @@
   <style>
     body.dark { background-color: #1e1e1e; color: white; }
     .item { margin-bottom: 15px; }
-    .item input[type="checkbox"] { transform: scale(1.3); margin-right: 10px; }
     .item-number { font-weight: bold; margin-right: 10px; width: 30px; display: inline-block; }
     .form-select, .form-control { max-width: 120px; }
   </style>
 </head>
-<body class="p-3">
-  <div class="container">
-    <h2 class="text-center mb-4">Produce Order</h2>
+<body class="bg-light p-3">
+  <div class="container bg-white shadow rounded p-4">
+    <h2 class="text-center mb-4 text-primary">Produce Order</h2>
 
     <div id="list"></div>
 
@@ -34,16 +33,16 @@
 
   <script>
     let defaultItems = [
-      { name: "Cherry Tomato", qty: "", unit: "pcs", done: false },
-      { name: "Cucumber", qty: "", unit: "pcs", done: false },
-      { name: "Tomato", qty: "", unit: "pcs", done: false },
-      { name: "Baby Spinach", qty: "", unit: "pcs", done: false },
-      { name: "Lemon", qty: "", unit: "pcs", done: false },
-      { name: "Lime", qty: "", unit: "pcs", done: false },
-      { name: "Romaine Hearts", qty: "", unit: "pcs", done: false },
-      { name: "Green Bell Pepper", qty: "", unit: "pcs", done: false },
-      { name: "Sliced Mushroom", qty: "", unit: "pcs", done: false },
-      { name: "Red Bell Pepper", qty: "", unit: "pcs", done: false }
+      { name: "Cherry Tomato", qty: "", unit: "pcs" },
+      { name: "Cucumber", qty: "", unit: "pcs" },
+      { name: "Tomato", qty: "", unit: "pcs" },
+      { name: "Baby Spinach", qty: "", unit: "pcs" },
+      { name: "Lemon", qty: "", unit: "pcs" },
+      { name: "Lime", qty: "", unit: "pcs" },
+      { name: "Romaine Hearts", qty: "", unit: "pcs" },
+      { name: "Green Bell Pepper", qty: "", unit: "pcs" },
+      { name: "Sliced Mushroom", qty: "", unit: "pcs" },
+      { name: "Red Bell Pepper", qty: "", unit: "pcs" }
     ];
 
     let items = JSON.parse(localStorage.getItem('orderList')) || JSON.parse(JSON.stringify(defaultItems));
@@ -55,14 +54,12 @@
     function syncInputValues() {
       const itemDivs = document.querySelectorAll('.item');
       itemDivs.forEach((div, index) => {
-        const checkbox = div.querySelector('input[type="checkbox"]');
         const name = div.querySelector('input[type="text"]').value.trim();
         const qty = div.querySelector('input[type="number"]').value;
         const unit = div.querySelector('select').value;
         items[index].name = name;
         items[index].qty = qty;
         items[index].unit = unit;
-        items[index].done = checkbox.checked;
       });
       saveItems();
     }
@@ -81,7 +78,6 @@
           <div class="item row align-items-center gx-2">
             <div class="col-auto">
               <span class="item-number">${number}.</span>
-              <input type="checkbox" ${item.done ? "checked" : ""} onchange="toggleDone(${index})">
             </div>
             <div class="col">
               <input type="text" class="form-control" value="${item.name}" onchange="updateName(${index}, this.value)">
@@ -104,15 +100,10 @@
       });
     }
 
-    function toggleDone(index) {
-      items[index].done = !items[index].done;
-      saveItems();
-    }
-
     function addItem() {
       const newItem = document.getElementById('newItem').value;
       if (newItem.trim() !== '') {
-        items.push({ name: newItem.trim(), qty: "", unit: "pcs", done: false });
+        items.push({ name: newItem.trim(), qty: "", unit: "pcs" });
         document.getElementById('newItem').value = '';
         saveItems();
         renderList();
@@ -166,7 +157,7 @@
       doc.text(`Exported on: ${today}`, 20, 26);
       let y = 40;
       items.forEach((item, index) => {
-        const line = `${index + 1}. ${item.done ? "[x]" : "[ ]"} ${item.name}: ${item.qty || ""} ${item.unit}`;
+        const line = `${index + 1}. ${item.name}: ${item.qty || ""} ${item.unit}`;
         doc.text(line, 20, y);
         y += 10;
       });
