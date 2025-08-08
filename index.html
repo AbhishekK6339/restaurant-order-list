@@ -2,165 +2,202 @@
 <html>
 <head>
   <title>Produce Order</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body.dark { background-color: #1e1e1e; color: white; }
-    .item { margin-bottom: 15px; }
-    .item-number { font-weight: bold; margin-right: 10px; width: 30px; display: inline-block; }
-    .form-select, .form-control { max-width: 120px; }
-    input[type="text"] {
-      white-space: normal !important;
-      word-break: break-word !important;
-    }
+    body.dark { background:#1e1e1e; color:#fff; }
+    .toolbar { position:sticky; top:0; z-index:1000; background:#f8f9fa; border-bottom:1px solid #e9ecef; }
+    .item { margin-bottom: 12px; }
+    .item-number { font-weight:600; min-width: 28px; text-align:right; display:inline-block; margin-right:6px; }
+    /* Let the name input take the most room; do NOT cap width globally */
+    .name-col { flex: 1 1 auto; min-width: 0; } /* allow flex to shrink properly */
+    .name-input { width:100%; }                 /* full width in its column */
+    /* Compact qty & unit */
+    .qty-col, .unit-col { flex: 0 0 90px; max-width: 110px; }
+    .btn-qty { padding: .25rem .5rem; font-size:.8rem; }
+    .list-container { padding: 16px; }
   </style>
 </head>
-<body class="bg-light p-3">
-  <div class="container bg-white shadow rounded p-4">
-    <h2 class="text-center mb-4 text-primary">Produce Order</h2>
-
-    <div id="list"></div>
-
-    <div class="input-group mb-3">
-      <input type="text" class="form-control" id="newItem" placeholder="New Item Name">
-      <button class="btn btn-primary" onclick="addItem()">Add Item</button>
-    </div>
-
-    <div class="d-grid gap-2 mb-2">
-      <button class="btn btn-secondary" onclick="prepareThen(sortItems)">Sort A–Z</button>
-      <button class="btn btn-warning" onclick="prepareThen(resetList)">Reset List</button>
-      <button class="btn btn-success" onclick="prepareThen(exportToPDF)">Export to PDF</button>
-      <button class="btn btn-dark" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+<body class="bg-light">
+  <!-- Sticky toolbar -->
+  <div class="toolbar">
+    <div class="container py-2">
+      <div class="row g-2 align-items-center">
+        <div class="col-12 col-md-3">
+          <input id="search" type="text" class="form-control" placeholder="Search items…">
+        </div>
+        <div class="col-12 col-md-5">
+          <div class="input-group">
+            <input type="text" id="newItem" class="form-control" placeholder="Add new item name">
+            <button class="btn btn-primary" onclick="addItem()">Add</button>
+          </div>
+        </div>
+        <div class="col-12 col-md-4 d-grid d-md-flex gap-2">
+          <button class="btn btn-secondary" onclick="prepareThen(sortItems)">Sort A–Z</button>
+          <button class="btn btn-warning" onclick="prepareThen(resetList)">Reset</button>
+          <button class="btn btn-success" onclick="prepareThen(exportToPDF)">PDF</button>
+          <button class="btn btn-dark" onclick="toggleDarkMode()">Dark</button>
+        </div>
+      </div>
     </div>
   </div>
 
+  <div class="container bg-white shadow rounded list-container mt-3">
+    <h2 class="text-center mb-3 text-primary">Produce Order</h2>
+    <div id="list"></div>
+  </div>
+
   <script>
+    // ---------- Data ----------
     let defaultItems = [
-      { name: "Cherry Tomato", qty: "", unit: "pcs" },
-      { name: "Cucumber", qty: "", unit: "pcs" },
-      { name: "Tomato", qty: "", unit: "pcs" },
-      { name: "Baby Spinach", qty: "", unit: "pcs" },
-      { name: "Lemon", qty: "", unit: "pcs" },
-      { name: "Lime", qty: "", unit: "pcs" },
-      { name: "Romaine Hearts", qty: "", unit: "pcs" },
-      { name: "Green Bell Pepper", qty: "", unit: "pcs" },
-      { name: "Sliced Mushroom", qty: "", unit: "pcs" },
-      { name: "Red Bell Pepper", qty: "", unit: "pcs" }
+      { name: "Cherry Tomato", qty:"", unit:"pcs" },
+      { name: "Cucumber", qty:"", unit:"pcs" },
+      { name: "Tomato", qty:"", unit:"pcs" },
+      { name: "Baby Spinach", qty:"", unit:"pcs" },
+      { name: "Lemon", qty:"", unit:"pcs" },
+      { name: "Lime", qty:"", unit:"pcs" },
+      { name: "Romaine Hearts", qty:"", unit:"pcs" },
+      { name: "Green Bell Pepper", qty:"", unit:"pcs" },
+      { name: "Sliced Mushroom", qty:"", unit:"pcs" },
+      { name: "Red Bell Pepper", qty:"", unit:"pcs" }
     ];
-
     let items = JSON.parse(localStorage.getItem('orderList')) || JSON.parse(JSON.stringify(defaultItems));
+    let filterText = "";
 
-    function saveItems() {
-      localStorage.setItem('orderList', JSON.stringify(items));
-    }
-
-    function syncInputValues() {
-      const itemDivs = document.querySelectorAll('.item');
-      itemDivs.forEach((div, index) => {
-        const name = div.querySelector('input[type="text"]').value.trim();
-        const qty = div.querySelector('input[type="number"]').value;
-        const unit = div.querySelector('select').value;
-        items[index].name = name;
-        items[index].qty = qty;
-        items[index].unit = unit;
+    // ---------- Storage helpers ----------
+    function saveItems(){ localStorage.setItem('orderList', JSON.stringify(items)); }
+    function syncInputValues(){
+      // Grab current dom values to items before any action
+      const rows = document.querySelectorAll('.item[data-index]');
+      rows.forEach(row => {
+        const idx = parseInt(row.getAttribute('data-index'));
+        if (Number.isNaN(idx)) return;
+        const name = row.querySelector('.name-input')?.value ?? '';
+        const qty  = row.querySelector('.qty-input')?.value ?? '';
+        const unit = row.querySelector('.unit-select')?.value ?? 'pcs';
+        // idx is visual index in filtered list; map it to actual index
+        const actualIndex = parseInt(row.getAttribute('data-actual-index'));
+        if (!Number.isNaN(actualIndex) && items[actualIndex]) {
+          items[actualIndex].name = name.trim();
+          items[actualIndex].qty  = qty;
+          items[actualIndex].unit = unit;
+        }
       });
       saveItems();
     }
+    function prepareThen(fn){ syncInputValues(); fn(); }
 
-    function prepareThen(actionFunc) {
+    // ---------- UI ----------
+    function renderList(){
+      const list = document.getElementById('list');
+      list.innerHTML = "";
+      const q = filterText.trim().toLowerCase();
+      const filtered = q ? items.map((it, i)=>({it, i})).filter(x => x.it.name.toLowerCase().includes(q)) 
+                         : items.map((it, i)=>({it, i}));
+      filtered.forEach(({it, i}, idx) => {
+        const number = idx + 1;
+        const row = document.createElement('div');
+        row.className = "item d-flex align-items-center gap-2 flex-wrap";
+        row.setAttribute('data-index', idx);
+        row.setAttribute('data-actual-index', i);
+        row.innerHTML = `
+          <span class="item-number">${number}.</span>
+          <div class="name-col">
+            <input class="form-control name-input" type="text" value="${escapeHtml(it.name)}" placeholder="Item name">
+          </div>
+          <div class="qty-col">
+            <input class="form-control form-control-sm qty-input" type="number" value="${it.qty ?? ''}" placeholder="Qty">
+          </div>
+          <div class="unit-col">
+            <select class="form-select form-select-sm unit-select">
+              <option value="pcs"  ${it.unit==="pcs"?"selected":""}>pcs</option>
+              <option value="case" ${it.unit==="case"?"selected":""}>case</option>
+              <option value="box"  ${it.unit==="box"?"selected":""}>box</option>
+              <option value="g"    ${it.unit==="g"?"selected":""}>g</option>
+            </select>
+          </div>
+          <div class="d-flex gap-1">
+            <button class="btn btn-outline-secondary btn-qty" onclick="nudgeQty(${i},1)">+1</button>
+            <button class="btn btn-outline-secondary btn-qty" onclick="nudgeQty(${i},5)">+5</button>
+            <button class="btn btn-outline-secondary btn-qty" onclick="nudgeQty(${i},10)">+10</button>
+            <button class="btn btn-outline-secondary btn-qty" onclick="clearQty(${i})">Clr</button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    // Prevent HTML injection in names
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // ---------- Fast entry helpers ----------
+    function nudgeQty(actualIndex, delta){
       syncInputValues();
-      actionFunc();
-    }
-
-    function renderList() {
-      const listDiv = document.getElementById('list');
-      listDiv.innerHTML = '';
-      items.forEach((item, index) => {
-        let number = index + 1;
-        listDiv.innerHTML += `
-          <div class="item row align-items-center gx-2">
-            <div class="col-auto">
-              <span class="item-number">${number}.</span>
-            </div>
-            <div class="col-6">
-              <input type="text" class="form-control text-wrap" style="white-space: normal; word-break: break-word;" value="${item.name}" onchange="updateName(${index}, this.value)">
-            </div>
-            <div class="col-2">
-              <input type="number" class="form-control form-control-sm" value="${item.qty}" placeholder="Qty" onchange="updateQty(${index}, this.value)">
-            </div>
-            <div class="col-2">
-              <select class="form-select form-select-sm" onchange="updateUnit(${index}, this.value)">
-                <option value="pcs" ${item.unit === "pcs" ? "selected" : ""}>pcs</option>
-                <option value="case" ${item.unit === "case" ? "selected" : ""}>case</option>
-                <option value="box" ${item.unit === "box" ? "selected" : ""}>box</option>
-                <option value="g" ${item.unit === "g" ? "selected" : ""}>g</option>
-              </select>
-            </div>
-          </div>`;
-      });
-    }
-
-    function addItem() {
-      const newItem = document.getElementById('newItem').value;
-      if (newItem.trim() !== '') {
-        items.push({ name: newItem.trim(), qty: "", unit: "pcs" });
-        document.getElementById('newItem').value = '';
-        saveItems();
-        renderList();
-      }
-    }
-
-    function updateQty(index, value) {
-      items[index].qty = value;
+      const cur = parseInt(items[actualIndex].qty || "0", 10) || 0;
+      const next = Math.max(0, cur + delta);
+      items[actualIndex].qty = String(next);
       saveItems();
+      renderList();
     }
-
-    function updateUnit(index, value) {
-      items[index].unit = value;
-      saveItems();
-    }
-
-    function updateName(index, value) {
-      items[index].name = value.trim();
-      saveItems();
-    }
-
-    function sortItems() {
-      items.sort((a, b) => a.name.localeCompare(b.name));
+    function clearQty(actualIndex){
+      syncInputValues();
+      items[actualIndex].qty = "";
       saveItems();
       renderList();
     }
 
-    function resetList() {
-      if (confirm("Are you sure you want to reset the list?")) {
-        items = JSON.parse(JSON.stringify(defaultItems));
-        saveItems();
-        renderList();
-      }
+    // ---------- Actions ----------
+    function addItem(){
+      const input = document.getElementById('newItem');
+      const name = (input.value || "").trim();
+      if(!name) return;
+      // duplicate guard (case-insensitive)
+      const exists = items.some(it => it.name.toLowerCase() === name.toLowerCase());
+      if (exists){ alert("Item already exists."); input.value=""; return; }
+      items.push({ name, qty:"", unit:"pcs" });
+      input.value = "";
+      saveItems();
+      renderList();
     }
-
-    async function exportToPDF() {
+    function sortItems(){
+      items.sort((a,b)=> a.name.localeCompare(b.name));
+      saveItems();
+      renderList();
+    }
+    function resetList(){
+      if(!confirm("Reset to default items?")) return;
+      items = JSON.parse(JSON.stringify(defaultItems));
+      saveItems();
+      renderList();
+    }
+    async function exportToPDF(){
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       const today = new Date().toLocaleString();
-      doc.setFontSize(14);
-      doc.text("Produce Order", 20, 20);
-      doc.setFontSize(10);
-      doc.text(`Exported on: ${today}`, 20, 26);
+      doc.setFontSize(14); doc.text("Produce Order", 20, 20);
+      doc.setFontSize(10); doc.text(`Exported on: ${today}`, 20, 26);
       let y = 40;
-      items.forEach((item, index) => {
-        const line = `${index + 1}. ${item.name}: ${item.qty || ""} ${item.unit}`;
-        doc.text(line, 20, y);
-        y += 10;
+      const q = filterText.trim().toLowerCase();
+      const filtered = q ? items.filter(it => it.name.toLowerCase().includes(q)) : items;
+      filtered.forEach((it, idx) => {
+        const line = `${idx+1}. ${it.name}: ${it.qty || ""} ${it.unit || ""}`.trim();
+        doc.text(line, 20, y); y += 8;
+        if (y > 280){ doc.addPage(); y = 20; }
       });
       doc.save("Produce_Order_List.pdf");
     }
+    function toggleDarkMode(){ document.body.classList.toggle("dark"); }
 
-    function toggleDarkMode() {
-      document.body.classList.toggle("dark");
-    }
+    // ---------- Search ----------
+    document.getElementById('search').addEventListener('input', (e)=>{
+      filterText = e.target.value || "";
+      renderList();
+    });
 
+    // Initial render
     renderList();
   </script>
 </body>
