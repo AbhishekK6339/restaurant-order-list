@@ -10,10 +10,8 @@
     .toolbar { position:sticky; top:0; z-index:1000; background:#f8f9fa; border-bottom:1px solid #e9ecef; }
     .item { margin-bottom: 12px; }
     .item-number { font-weight:600; min-width: 28px; text-align:right; display:inline-block; margin-right:6px; }
-    /* Let the name input take the most room; do NOT cap width globally */
-    .name-col { flex: 1 1 auto; min-width: 0; } /* allow flex to shrink properly */
-    .name-input { width:100%; }                 /* full width in its column */
-    /* Compact qty & unit */
+    .name-col { flex: 1 1 auto; min-width: 0; }
+    .name-input { width:100%; }
     .qty-col, .unit-col { flex: 0 0 90px; max-width: 110px; }
     .btn-qty { padding: .25rem .5rem; font-size:.8rem; }
     .list-container { padding: 16px; }
@@ -36,6 +34,8 @@
         <div class="col-12 col-md-4 d-grid d-md-flex gap-2">
           <button class="btn btn-secondary" onclick="prepareThen(sortItems)">Sort A–Z</button>
           <button class="btn btn-warning" onclick="prepareThen(resetList)">Reset</button>
+          <button class="btn btn-outline-secondary" id="hideBtn" onclick="toggleHideZero()">Hide 0 Qty</button>
+          <button class="btn btn-outline-danger" onclick="removeZeroQty()">Remove 0 Qty</button>
           <button class="btn btn-success" onclick="prepareThen(exportToPDF)">PDF</button>
           <button class="btn btn-dark" onclick="toggleDarkMode()">Dark</button>
         </div>
@@ -64,38 +64,47 @@
     ];
     let items = JSON.parse(localStorage.getItem('orderList')) || JSON.parse(JSON.stringify(defaultItems));
     let filterText = "";
+    let hideZero = false;
 
     // ---------- Storage helpers ----------
     function saveItems(){ localStorage.setItem('orderList', JSON.stringify(items)); }
     function syncInputValues(){
-      // Grab current dom values to items before any action
+      // store current DOM input values back into items
       const rows = document.querySelectorAll('.item[data-index]');
       rows.forEach(row => {
-        const idx = parseInt(row.getAttribute('data-index'));
-        if (Number.isNaN(idx)) return;
+        const actualIndex = parseInt(row.getAttribute('data-actual-index'));
+        if (Number.isNaN(actualIndex) || !items[actualIndex]) return;
         const name = row.querySelector('.name-input')?.value ?? '';
         const qty  = row.querySelector('.qty-input')?.value ?? '';
         const unit = row.querySelector('.unit-select')?.value ?? 'pcs';
-        // idx is visual index in filtered list; map it to actual index
-        const actualIndex = parseInt(row.getAttribute('data-actual-index'));
-        if (!Number.isNaN(actualIndex) && items[actualIndex]) {
-          items[actualIndex].name = name.trim();
-          items[actualIndex].qty  = qty;
-          items[actualIndex].unit = unit;
-        }
+        items[actualIndex].name = name.trim();
+        items[actualIndex].qty  = qty;
+        items[actualIndex].unit = unit;
       });
       saveItems();
     }
     function prepareThen(fn){ syncInputValues(); fn(); }
+
+    // ---------- Filters ----------
+    function isZeroQty(q){
+      // treat empty or "0" (any amount of spaces) as zero; "0.0" also zero
+      const s = String(q ?? "").trim();
+      if (s === "") return true;
+      const n = Number(s);
+      return !isNaN(n) && n === 0;
+    }
 
     // ---------- UI ----------
     function renderList(){
       const list = document.getElementById('list');
       list.innerHTML = "";
       const q = filterText.trim().toLowerCase();
-      const filtered = q ? items.map((it, i)=>({it, i})).filter(x => x.it.name.toLowerCase().includes(q)) 
-                         : items.map((it, i)=>({it, i}));
-      filtered.forEach(({it, i}, idx) => {
+
+      let mapped = items.map((it, i)=>({it, i}));
+      if (q) mapped = mapped.filter(x => x.it.name.toLowerCase().includes(q));
+      if (hideZero) mapped = mapped.filter(x => !isZeroQty(x.it.qty));
+
+      mapped.forEach(({it, i}, idx) => {
         const number = idx + 1;
         const row = document.createElement('div');
         row.className = "item d-flex align-items-center gap-2 flex-wrap";
@@ -111,10 +120,11 @@
           </div>
           <div class="unit-col">
             <select class="form-select form-select-sm unit-select">
-              <option value="pcs"  ${it.unit==="pcs"?"selected":""}>pcs</option>
-              <option value="case" ${it.unit==="case"?"selected":""}>case</option>
-              <option value="box"  ${it.unit==="box"?"selected":""}>box</option>
-              <option value="g"    ${it.unit==="g"?"selected":""}>g</option>
+              <option value="pcs"   ${it.unit==="pcs"?"selected":""}>pcs</option>
+              <option value="bunch" ${it.unit==="bunch"?"selected":""}>bunch</option>
+              <option value="case"  ${it.unit==="case"?"selected":""}>case</option>
+              <option value="box"   ${it.unit==="box"?"selected":""}>box</option>
+              <option value="g"     ${it.unit==="g"?"selected":""}>g</option>
             </select>
           </div>
           <div class="d-flex gap-1">
@@ -126,6 +136,9 @@
         `;
         list.appendChild(row);
       });
+
+      // update toggle button label
+      document.getElementById('hideBtn').textContent = hideZero ? "Show 0 Qty" : "Hide 0 Qty";
     }
 
     // Prevent HTML injection in names
@@ -136,7 +149,7 @@
     // ---------- Fast entry helpers ----------
     function nudgeQty(actualIndex, delta){
       syncInputValues();
-      const cur = parseInt(items[actualIndex].qty || "0", 10) || 0;
+      const cur = parseFloat(items[actualIndex].qty || "0") || 0;
       const next = Math.max(0, cur + delta);
       items[actualIndex].qty = String(next);
       saveItems();
@@ -173,6 +186,19 @@
       saveItems();
       renderList();
     }
+    function toggleHideZero(){
+      prepareThen(()=>{ hideZero = !hideZero; renderList(); });
+    }
+    function removeZeroQty(){
+      prepareThen(()=>{
+        const before = items.length;
+        items = items.filter(it => !isZeroQty(it.qty));
+        const removed = before - items.length;
+        saveItems();
+        renderList();
+        if (removed > 0) alert(`Removed ${removed} item(s) with 0 quantity.`);
+      });
+    }
     async function exportToPDF(){
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
@@ -180,10 +206,14 @@
       doc.setFontSize(14); doc.text("Produce Order", 20, 20);
       doc.setFontSize(10); doc.text(`Exported on: ${today}`, 20, 26);
       let y = 40;
+
+      // Always exclude zero-quantity from export
       const q = filterText.trim().toLowerCase();
-      const filtered = q ? items.filter(it => it.name.toLowerCase().includes(q)) : items;
+      let filtered = q ? items.filter(it => it.name.toLowerCase().includes(q)) : items;
+      filtered = filtered.filter(it => !isZeroQty(it.qty));
+
       filtered.forEach((it, idx) => {
-        const line = `${idx+1}. ${it.name}: ${it.qty || ""} ${it.unit || ""}`.trim();
+        const line = `${idx+1}. ${it.name}: ${it.qty} ${it.unit || ""}`.trim();
         doc.text(line, 20, y); y += 8;
         if (y > 280){ doc.addPage(); y = 20; }
       });
